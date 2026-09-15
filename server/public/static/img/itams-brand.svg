@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 106" role="img" aria-labelledby="title desc">
+  <title id="title">IT Asset Monitoring System</title>
+  <desc id="desc">Teal IT logo with the system name</desc>
+  <rect x="18" y="17" width="72" height="72" rx="17" fill="#12b3ad"/>
+  <text x="54" y="63" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="29" font-weight="900" text-anchor="middle">IT</text>
+  <text x="112" y="46" fill="#071b3e" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="800">IT Asset Monitoring</text>
+  <text x="112" y="70" fill="#071b3e" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="800">System</text>
+</svg>

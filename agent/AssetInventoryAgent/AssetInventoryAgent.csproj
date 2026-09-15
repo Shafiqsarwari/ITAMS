@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>ITAMS</AssemblyName>
+    <RootNamespace>AssetInventoryAgent</RootNamespace>
+    <AssemblyTitle>ITAMS</AssemblyTitle>
+    <Product>ITAMS</Product>
+    <Description>ITAMS</Description>
+    <Company>ITAMS</Company>
+    <Version>1.3.17</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lextm.SharpSnmpLib" Version="12.5.7" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,132 @@
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using AssetInventoryAgent.Models;
+
+namespace AssetInventoryAgent.Services;
+
+public sealed class AgentApiClient
+{
+    private readonly HttpClient _http = new(CreateHttpHandler())
+    {
+        Timeout = TimeSpan.FromSeconds(120)
+    };
+
+    public async Task<AgentConfig> EnsureRegisteredAsync(AgentConfig config, InventoryPayload payload)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{config.BaseUrl}/api/agent/register");
+        request.Headers.Add("X-Registration-Key", config.RegistrationKey);
+        request.Content = Json(new
+        {
+            payload.ComputerName,
+            payload.SerialNumber,
+            payload.AgentVersion
+        });
+        using var response = await _http.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<RegistrationResponse>(body, JsonDefaults.Options);
+        if (string.IsNullOrWhiteSpace(result?.Token))
+        {
+            throw new InvalidOperationException("Registration response did not include an agent token.");
+        }
+
+        return config with
+        {
+            AgentToken = result.Token,
+            IntervalMinutes = result.IntervalMinutes > 0 ? result.IntervalMinutes : config.IntervalMinutes,
+            HeartbeatSeconds = result.HeartbeatSeconds > 0 ? result.HeartbeatSeconds : config.HeartbeatSeconds,
+            ChangeScanSeconds = result.ChangeScanSeconds > 0 ? result.ChangeScanSeconds : config.ChangeScanSeconds
+        };
+    }
+
+    public async Task UploadInventoryAsync(AgentConfig config, InventoryPayload payload, string? eventId = null, DateTimeOffset? observedAtUtc = null)
+    {
+        using var request = AuthRequest(HttpMethod.Post, $"{config.BaseUrl}/api/agent/inventory", config);
+        AddEventHeaders(request, eventId, observedAtUtc);
+        request.Content = Json(payload);
+        using var response = await _http.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<HeartbeatResponse> HeartbeatAsync(AgentConfig config)
+    {
+        using var request = AuthRequest(HttpMethod.Post, $"{config.BaseUrl}/api/agent/heartbeat", config);
+        request.Content = Json(new
+        {
+            status = "online",
+            computerName = Environment.MachineName,
+            agentVersion = typeof(AgentApiClient).Assembly.GetName().Version?.ToString() ?? "1.0.0",
+            observedAtUtc = DateTimeOffset.UtcNow
+        });
+        using var response = await _http.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<HeartbeatResponse>(body, JsonDefaults.Options) ?? new HeartbeatResponse();
+    }
+
+    public async Task MarkOfflineAsync(AgentConfig config, string reason)
+    {
+        using var request = AuthRequest(HttpMethod.Post, $"{config.BaseUrl}/api/agent/offline", config);
+        request.Content = Json(new
+        {
+            status = "offline",
+            reason,
+            computerName = Environment.MachineName,
+            observedAtUtc = DateTimeOffset.UtcNow
+        });
+        using var response = await _http.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task UploadLogsAsync(AgentConfig config, IEnumerable<object> logs)
+    {
+        using var request = AuthRequest(HttpMethod.Post, $"{config.BaseUrl}/api/agent/logs", config);
+        request.Content = Json(new { logs });
+        using var response = await _http.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+    }
+
+    private static HttpRequestMessage AuthRequest(HttpMethod method, string url, AgentConfig config)
+    {
+        var request = new HttpRequestMessage(method, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.AgentToken);
+        return request;
+    }
+
+    private static void AddEventHeaders(HttpRequestMessage request, string? eventId, DateTimeOffset? observedAtUtc)
+    {
+        if (!string.IsNullOrWhiteSpace(eventId))
+        {
+            request.Headers.Add("X-Agent-Event-Id", eventId);
+        }
+        if (observedAtUtc.HasValue)
+        {
+            request.Headers.Add("X-Agent-Observed-At", observedAtUtc.Value.ToString("O"));
+        }
+    }
+
+    private static StringContent Json(object value) =>
+        new(JsonSerializer.Serialize(value, JsonDefaults.Options), Encoding.UTF8, "application/json");
+
+    private static HttpClientHandler CreateHttpHandler() =>
+        new()
+        {
+            ServerCertificateCustomValidationCallback = static (_, _, _, _) => true
+        };
+
+    private sealed class RegistrationResponse
+    {
+        public string? Token { get; set; }
+        public int IntervalMinutes { get; set; }
+        public int HeartbeatSeconds { get; set; }
+        public int ChangeScanSeconds { get; set; }
+    }
+
+    public sealed class HeartbeatResponse
+    {
+        public bool SyncInventory { get; set; }
+    }
+}

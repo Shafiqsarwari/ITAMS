@@ -1,0 +1,38 @@
+# Local secrets and deployment-specific config
+server/config/local.php
+server/config/*.local.php
+server/config/database.php
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.pfx
+
+# PHP runtime artifacts and logs
+server/public/error_log
+server/storage/rate_limits/
+server/storage/*.log
+server/storage/*.json
+!server/storage/.gitkeep
+
+# .NET build outputs
+agent/**/bin/
+agent/**/obj/
+agent/installer/dist/
+agent/**/*.user
+agent/**/*.suo
+agent/**/*.cache
+
+# IDE/editor files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# General logs
+*.log
+
+# Windows service setup artifacts
+**/*.aps
+**/*.tmp
