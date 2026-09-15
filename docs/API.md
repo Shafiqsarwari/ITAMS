@@ -1,4 +1,4 @@
-# IT Asset Maintenance Management System Agent API Documentation
+# ITAMS
 
 Base URL examples:
 
